@@ -1,97 +1,26 @@
-name: Release
+name: NoMore Spam
 
 on:
-  push:
-    tags:
-      - 'v*'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  issues:
+    types: [opened]
 
 permissions:
-  contents: write
+  contents: read
+  issues: write
+  models: read
+  actions: write
 
 jobs:
-  release:
+  spam-detection:
     runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Shanghai
+    name: NoMore Spam
+    
     steps:
-      - name: Checkout source code
-        run: |
-          git clone https://${{ secrets.PUSH_TOKEN }}@${{ secrets.REPO_URL }}.git .
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-          echo "Tag: $TAG_NAME"
-      - name: Get tag message
-        run: |
-          TAG_NAME=${{ steps.version.outputs.tag }}
-          RELEASE_BODY=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME" | jq -r '.body // ""')
-          printf '%s\n' "$RELEASE_BODY" > /tmp/tag_message.txt
-          echo "Tag message saved to /tmp/tag_message.txt"
-          echo "Tag message content:"
-          cat /tmp/tag_message.txt
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Fuck All the Shit
+        uses: JohnsonRan/nomore-spam@main
         with:
-          node-version: '22'
-
-      - name: Update version files and generate changelog
-        run: |
-          CURRENT_DATE=$(date +%Y-%m-%d)
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG_MESSAGE=$(cat /tmp/tag_message.txt)
-          echo "Updating CHANGELOG file..."
-          {
-            echo "## [$VERSION] - $CURRENT_DATE"
-            echo ""
-            cat /tmp/tag_message.txt
-            echo ""
-          } > /tmp/new_entry.txt
-          if [ -f "CHANGELOG" ]; then
-            cp CHANGELOG CHANGELOG.bak
-            cat /tmp/new_entry.txt CHANGELOG.bak > CHANGELOG
-          else
-            cp /tmp/new_entry.txt CHANGELOG
-          fi
-          rm CHANGELOG.bak
-          echo "✅ Updated CHANGELOG with new entry for version $VERSION"
-          echo "Updating VERSION.txt..."
-          echo "$VERSION" > VERSION.txt
-          echo "✅ Updated VERSION.txt to $VERSION"
-          echo "Generating changelog TypeScript file..."
-          node scripts/convert-changelog.js
-          echo "Updating version.ts..."
-            sed -i "s/const CURRENT_VERSION = '[^']*';/const CURRENT_VERSION = '$VERSION';/" src/lib/version.ts
-            echo "✅ Updated version.ts to $VERSION"
-      - name: Commit to Codeberg
-        run: |
-          git config --local user.email "${{ secrets.PUSH_EMAIL }}"
-          git config --local user.name "${{ secrets.PUSH_NAME }}"
-          git add CHANGELOG VERSION.txt src/lib/changelog.ts src/lib/version.ts
-          git commit -m "chore: Bump to ${{ steps.version.outputs.version }}"
-          git push https://${{ secrets.PUSH_TOKEN }}@${{ secrets.REPO_URL }}.git HEAD:main
-          rm -rf .git
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          path: 'github'
-          ref: 'main'
-
-      - name: Commit to Github
-        run: |
-          cd github
-          cp ../{CHANGELOG,VERSION.txt} .
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add CHANGELOG VERSION.txt
-          git commit -m "chore: Bump to ${{ steps.version.outputs.version }}"
-          git push -u https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ai-base-url: ${{ secrets.AI_BASE_URL }}
+          ai-api-key: ${{ secrets.AI_API_KEY }}
+          ai-model: ${{ secrets.AI_MODEL }}
+          blacklist: ${{ secrets.BLACKLIST }}
